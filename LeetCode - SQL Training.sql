@@ -582,3 +582,99 @@ FROM Project p
 JOIN Employee e 
     ON p.employee_id = e.employee_id
 GROUP BY p.project_id
+
+
+=================================================================================================================================
+Q15:Percentage of Users Attended a Contest
+Table: Users
+
++-------------+---------+
+| Column Name | Type    |
++-------------+---------+
+| user_id     | int     |
+| user_name   | varchar |
++-------------+---------+
+user_id is the primary key (column with unique values) for this table.
+Each row of this table contains the name and the id of a user.
+ 
+
+Table: Register
+
++-------------+---------+
+| Column Name | Type    |
++-------------+---------+
+| contest_id  | int     |
+| user_id     | int     |
++-------------+---------+
+(contest_id, user_id) is the primary key (combination of columns with unique values) for this table.
+Each row of this table contains the id of a user and the contest they registered into.
+ 
+
+Write a solution to find the percentage of the users registered in each contest rounded to two decimals.
+
+Return the result table ordered by percentage in descending order. In case of a tie, order it by contest_id in ascending order. 
+
+Solution:
+
+SELECT 
+    r.contest_id,
+    ROUND(
+        COUNT(*) * 100.0 / (SELECT COUNT(u.user_id) FROM Users u),
+        2
+    ) AS percentage
+FROM Register r
+GROUP BY r.contest_id
+ORDER BY 
+    percentage DESC,
+    r.contest_id
+
+
+=================================================================================================================================
+
+Q16:Queries Quality and Percentage
+Table: Queries
+
++-------------+---------+
+| Column Name | Type    |
++-------------+---------+
+| query_name  | varchar |
+| result      | varchar |
+| position    | int     |
+| rating      | int     |
++-------------+---------+
+This table may have duplicate rows.
+This table contains information collected from some queries on a database.
+The position column has a value from 1 to 500.
+The rating column has a value from 1 to 5. Query with rating less than 3 is a poor query.
+ 
+
+We define query quality as:
+
+The average of the ratio between query rating and its position.
+
+We also define poor query percentage as:
+
+The percentage of all queries with rating less than 3.
+
+Write a solution to find each query_name, the quality and poor_query_percentage.
+
+Both quality and poor_query_percentage should be rounded to 2 decimal places.
+
+Solution:
+
+SELECT 
+    query_name,
+    ROUND(AVG(rating * 1.0 / position), 2) AS quality,
+    ROUND(
+        SUM(CASE WHEN rating < 3 THEN 1 ELSE 0 END) * 100.0 
+        / COUNT(rating), 
+    2) AS poor_query_percentage
+FROM Queries
+WHERE query_name IS NOT NULL
+GROUP BY query_name
+
+
+
+
+
+
