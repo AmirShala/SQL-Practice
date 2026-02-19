@@ -520,7 +520,38 @@ ORDER BY rating DESC
 
 =================================================================================================================================
 
-Q13:
+Q13:Average Selling Price
+
+Table: Prices
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| product_id    | int     |
+| start_date    | date    |
+| end_date      | date    |
+| price         | int     |
++---------------+---------+
+(product_id, start_date, end_date) is the primary key (combination of columns with unique values) for this table.
+Each row of this table indicates the price of the product_id in the period from start_date to end_date.
+For each product_id there will be no two overlapping periods. That means there will be no two intersecting periods for the same product_id.
+ 
+
+Table: UnitsSold
+
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| product_id    | int     |
+| purchase_date | date    |
+| units         | int     |
++---------------+---------+
+This table may contain duplicate rows.
+Each row of this table indicates the date, units, and product_id of each product sold. 
+ 
+
+Write a solution to find the average selling price for each product. average_price should be rounded to 2 decimal places. If a product does not have any sold units, its average selling price is assumed to be 0.
+
+Return the result table in any order.
 
 
 
@@ -586,8 +617,8 @@ GROUP BY p.project_id
 
 =================================================================================================================================
 Q15:Percentage of Users Attended a Contest
-Table: Users
 
+Table: Users
 +-------------+---------+
 | Column Name | Type    |
 +-------------+---------+
@@ -632,8 +663,8 @@ ORDER BY
 =================================================================================================================================
 
 Q16:Queries Quality and Percentage
-Table: Queries
 
+Table: Queries
 +-------------+---------+
 | Column Name | Type    |
 +-------------+---------+
@@ -672,6 +703,128 @@ SELECT
 FROM Queries
 WHERE query_name IS NOT NULL
 GROUP BY query_name
+
+=================================================================================================================================
+
+Q17:Monthly Transactions I
+
+Table: Transactions
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| id            | int     |
+| country       | varchar |
+| state         | enum    |
+| amount        | int     |
+| trans_date    | date    |
++---------------+---------+
+id is the primary key of this table.
+The table has information about incoming transactions.
+The state column is an enum of type ["approved", "declined"].
+ 
+
+Write an SQL query to find for each month and country, the number of transactions and their total amount, the number of approved transactions and their total amount.
+
+Return the result table in any order.
+
+Solution:
+
+SELECT 
+    FORMAT(trans_date, 'yyyy-MM') AS month,
+    country,
+    COUNT(id) AS trans_count,
+    SUM(CASE WHEN state = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+    SUM(amount) AS trans_total_amount, 
+    SUM(CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total_amount
+FROM Transactions
+GROUP BY FORMAT(trans_date, 'yyyy-MM'), country
+
+=================================================================================================================================
+
+
+Q18:Immediate Food Delivery II
+
+Table: Delivery
++-----------------------------+---------+
+| Column Name                 | Type    |
++-----------------------------+---------+
+| delivery_id                 | int     |
+| customer_id                 | int     |
+| order_date                  | date    |
+| customer_pref_delivery_date | date    |
++-----------------------------+---------+
+delivery_id is the column of unique values of this table.
+The table holds information about food delivery to customers that make orders at some date and specify a preferred delivery date (on the same order date or after it).
+ 
+
+If the customer's preferred delivery date is the same as the order date, then the order is called immediate; otherwise, it is called scheduled.
+
+The first order of a customer is the order with the earliest order date that the customer made. It is guaranteed that a customer has precisely one first order.
+
+Write a solution to find the percentage of immediate orders in the first orders of all customers, rounded to 2 decimal places. 
+
+Solution:
+
+WITH FirstOrders AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY customer_id 
+               ORDER BY order_date
+           ) AS rn
+    FROM Delivery
+)
+
+SELECT 
+    ROUND(
+        SUM(CASE 
+            WHEN order_date = customer_pref_delivery_date THEN 1 
+            ELSE 0 
+        END) * 100.0 / COUNT(*)
+    , 2) AS immediate_percentage
+FROM FirstOrders
+WHERE rn = 1
+
+
+=================================================================================================================================
+
+Q19:Game Play Analysis IV
+
+Table: Activity
++--------------+---------+
+| Column Name  | Type    |
++--------------+---------+
+| player_id    | int     |
+| device_id    | int     |
+| event_date   | date    |
+| games_played | int     |
++--------------+---------+
+(player_id, event_date) is the primary key (combination of columns with unique values) of this table.
+This table shows the activity of players of some games.
+Each row is a record of a player who logged in and played a number of games (possibly 0) before logging out on someday using some device.
+
+Write a solution to report the fraction of players that logged in again on the day after the day they first logged in, rounded to 2 decimal places.
+In other words, you need to determine the number of players who logged in on the day immediately following their initial login, and divide it by the number of total players.
+
+
+Solution: 
+
+SELECT 
+    ROUND(
+        AVG(CASE 
+            WHEN a2.player_id IS NOT NULL THEN 1.0 
+            ELSE 0 
+        END)
+    ,2) AS fraction
+FROM (
+    SELECT player_id, MIN(event_date) AS first_login
+    FROM Activity
+    GROUP BY player_id
+) f
+LEFT JOIN Activity a2
+    ON f.player_id = a2.player_id
+   AND a2.event_date = DATEADD(day, 1, f.first_login)
+
+
 
 
 
