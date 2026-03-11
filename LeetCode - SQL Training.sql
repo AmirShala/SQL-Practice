@@ -1430,14 +1430,166 @@ SELECT
     'High Salary' AS Category,
     COUNT(CASE WHEN Income > 50000 THEN 1 END) AS Accounts_Count
 FROM Accounts
+
+=================================================================================================================================
+
+Q34: Employees Whose Manager Left the Company
+
+Table: Employees
++-------------+----------+
+| Column Name | Type     |
++-------------+----------+
+| employee_id | int      |
+| name        | varchar  |
+| manager_id  | int      |
+| salary      | int      |
++-------------+----------+
+In SQL, employee_id is the primary key for this table.
+This table contains information about the employees, their salary, and the ID of their manager. Some employees do not have a manager (manager_id is null). 
+ 
+
+Find the IDs of the employees whose salary is strictly less than $30000 and whose manager left the company. When a manager leaves the company, their information is deleted from the Employees table, but the reports still have their manager_id set to the manager that left.
+
+Return the result table ordered by employee_id.
+
+
+Solution:
+
+SELECT Employee_Id
+FROM Employees
+WHERE Salary < 30000
+AND Manager_Id NOT IN (
+    SELECT Employee_Id
+    FROM Employees
+)
+ORDER BY Employee_Id
+=================================================================================================================================
+
+Q35: Exchange Seats
+
+Table: Seat
++-------------+---------+
+| Column Name | Type    |
++-------------+---------+
+| id          | int     |
+| student     | varchar |
++-------------+---------+
+id is the primary key (unique value) column for this table.
+Each row of this table indicates the name and the ID of a student.
+The ID sequence always starts from 1 and increments continuously.
+ 
+
+Write a solution to swap the seat id of every two consecutive students. If the number of students is odd, the id of the last student is not swapped.
+
+Return the result table ordered by id in ascending order.
+
+
+Solution:
+
+SELECT
+    Id,
+    CASE
+        WHEN Id % 2 = 0
+            THEN LAG(Student) OVER (ORDER BY Id)
+        ELSE COALESCE(
+            LEAD(Student) OVER (ORDER BY Id),
+            Student
+        )
+    END AS Student
+FROM Seat
+
+=================================================================================================================================
+
+Q36: Movie Rating
+
+Table: Movies
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| movie_id      | int     |
+| title         | varchar |
++---------------+---------+
+movie_id is the primary key (column with unique values) for this table.
+title is the name of the movie.
+Each movie has a unique title.
+
+Table: Users
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| user_id       | int     |
+| name          | varchar |
++---------------+---------+
+user_id is the primary key (column with unique values) for this table.
+The column 'name' has unique values.
+
+Table: MovieRating
++---------------+---------+
+| Column Name   | Type    |
++---------------+---------+
+| movie_id      | int     |
+| user_id       | int     |
+| rating        | int     |
+| created_at    | date    |
++---------------+---------+
+(movie_id, user_id) is the primary key (column with unique values) for this table.
+This table contains the rating of a movie by a user in their review.
+created_at is the user's review date. 
+ 
+
+Write a solution to:
+
+Find the name of the user who has rated the greatest number of movies. In case of a tie, return the lexicographically smaller user name.
+Find the movie name with the highest average rating in February 2020. In case of a tie, return the lexicographically smaller movie name.
+
+
+Solution:
+
+SELECT Results
+FROM (
+    SELECT TOP 1
+        U.Name AS Results
+    FROM Users U
+    JOIN MovieRating MR
+        ON U.User_Id = MR.User_Id
+    GROUP BY U.Name
+    ORDER BY COUNT(*) DESC, U.Name ASC
+) A
+
+UNION ALL
+
+SELECT Results
+FROM (
+    SELECT TOP 1
+        M.Title AS Results
+    FROM Movies M
+    JOIN MovieRating MR
+        ON M.Movie_Id = MR.Movie_Id
+    WHERE MR.Created_at BETWEEN '2020-02-01' AND '2020-02-29'
+    GROUP BY M.Title
+    ORDER BY AVG(MR.Rating * 1.0) DESC, M.Title ASC
+) B
+
+=================================================================================================================================
+
+Q37: 
+
+
+Solution:
+
+
+=================================================================================================================================
+
+Q38: 
+
+
+Solution:
+
+
 =================================================================================================================================
 =================================================================================================================================
 =================================================================================================================================
-=================================================================================================================================
-=================================================================================================================================
-=================================================================================================================================
-=================================================================================================================================
-=================================================================================================================================
+
 
 
 
