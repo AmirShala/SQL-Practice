@@ -323,6 +323,127 @@ ORDER BY "InvoiceId", "Month"
 
 ===========================================================================================================================================
 
+Q9: Forward Fill Missing Values
+
+Mission Background
+As a Logistics Data Analyst, you are working with the delivery_log_851 table. Due to a data entry shortcut, the region and city were only recorded for the first package in each group. Subsequent rows have NULL for these fields, but they belong to the same region and city as the last non-null entry above them.
+
+
+Analysis Requirements
+Fill every NULL region and city with the most recent non-null value that precedes it (based on the row ID ordering). Every row should display a complete region, city, and package code.
+
+
+Success Criteria
+A new column representing the filled region (never NULL)
+A new column representing the filled city (never NULL)
+The package code
+Ordering:
+
+By row ID ascending
+
+Solution:
+
+WITH filled AS (
+    SELECT
+        row_id,
+        region,
+        city,
+        package_code,
+        MAX(CASE WHEN region IS NOT NULL THEN row_id END) OVER (ORDER BY row_id) AS region_grp,
+        MAX(CASE WHEN city IS NOT NULL THEN row_id END) OVER (ORDER BY row_id) AS city_grp
+    FROM delivery_log_851
+)
+SELECT
+    (SELECT d.region FROM delivery_log_851 AS d WHERE d.row_id = f.region_grp) AS "Region",
+    (SELECT d.city FROM delivery_log_851 AS d WHERE d.row_id = f.city_grp) AS "City",
+    f.package_code AS "PackageCode"
+FROM filled AS f
+ORDER BY f.row_id
+
+===========================================================================================================================================
+
+Q10: User Session Identification from Event Logs
+
+Mission Background
+As a Product Analyst, you need to identify user sessions from raw event logs. The user_events_583 table contains timestamped user events (page views, clicks, etc.). A session is defined as a sequence of events with no more than 30 minutes between consecutive events. Events more than 30 minutes apart start a new session.
+
+
+Analysis Requirements
+Identify sessions for each user by detecting gaps greater than 30 minutes. Calculate session metrics including event count, duration, and whether it was a bounce (single-event session).
+
+
+Success Criteria
+Your query must return the following columns:
+
+user_id: The user identifier
+A column representing the session number for that user (1, 2, 3...)
+A column representing the count of events in the session
+A column representing the session duration in minutes
+A column indicating if the session is a bounce (Yes/No)
+Definitions:
+
+Session gap threshold: 30 minutes
+Bounce: A session with only 1 event
+Duration: Time between first and last event (0 for bounces)
+Ordering:
+
+By user_id ascending, then by session number ascending
+This sessionization enables understanding user engagement patterns, identifying bounce rates, and measuring session quality.
+
+Solution:
+
+WITH EventGaps AS (
+    SELECT 
+        event_id,
+        user_id,
+        event_type,
+        event_timestamp,
+        LAG(event_timestamp) OVER (PARTITION BY user_id ORDER BY event_timestamp) AS prev_timestamp,
+        ROUND((julianday(event_timestamp) - julianday(LAG(event_timestamp) OVER (PARTITION BY user_id ORDER BY event_timestamp))) * 24 * 60, 1) AS minutes_since_last
+    FROM user_events_583
+),
+SessionMarkers AS (
+    SELECT 
+        event_id,
+        user_id,
+        event_type,
+        event_timestamp,
+        CASE 
+            WHEN prev_timestamp IS NULL THEN 1
+            WHEN minutes_since_last > 30 THEN 1
+            ELSE 0
+        END AS is_new_session
+    FROM EventGaps
+),
+SessionAssigned AS (
+    SELECT 
+        event_id,
+        user_id,
+        event_type,
+        event_timestamp,
+        SUM(is_new_session) OVER (PARTITION BY user_id ORDER BY event_timestamp) AS session_num
+    FROM SessionMarkers
+),
+SessionStats AS (
+    SELECT 
+        user_id,
+        session_num,
+        COUNT(*) AS event_count,
+        ROUND((julianday(MAX(event_timestamp)) - julianday(MIN(event_timestamp))) * 24 * 60, 1) AS duration_minutes
+    FROM SessionAssigned
+    GROUP BY user_id, session_num
+)
+SELECT 
+    user_id AS "UserID",
+    session_num AS "SessionNum",
+    event_count AS "EventCount",
+    duration_minutes AS "DurationMinutes",
+    CASE WHEN event_count = 1 THEN 'Yes' ELSE 'No' END AS "IsBounce"
+FROM SessionStats
+ORDER BY user_id, session_num;
+
+===========================================================================================================================================
+
 
 
 
