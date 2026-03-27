@@ -1,5 +1,5 @@
-'''These Questions are from https://www.sqils.io/ that have interactive exercises and real-world examples.
-    Some of the questions where answered in SQLite. 
+'''These Questions are from https://www.sqils.io/ , this site has interactive exercises and real-world examples.
+    I am using SQLite syntax to solve these questions. 
     '''
 /*
 Q1:CAC Payback by Channel
@@ -444,7 +444,88 @@ ORDER BY user_id, session_num;
 
 ===========================================================================================================================================
 
+Q11: Product Affinity Analysis (Market Basket)
 
+Mission Background
+As a Merchandising Analyst, you need to identify product pairs that are frequently purchased together for cross-selling recommendations. The basket_products_265 table contains product information, and basket_order_items_265 tracks which products appear in each order. You must calculate affinity metrics to find strong product associations.
+
+
+Analysis Requirements
+Find product pairs that appear together in orders and calculate association metrics: Support (percentage of all orders containing both) and Confidence (given product A was purchased, what percentage also included product B, and vice versa). Round all percentage metrics to 1 decimal place using the ROUND function.
+
+
+Success Criteria
+Your query must return the following columns:
+
+A column for the first product name in the pair
+A column for the second product name in the pair
+A column for how many orders contained both products
+A column for support percentage (pair orders / total orders), rounded to 1 decimal place
+A column for confidence A→B (pair orders / product A orders), rounded to 1 decimal place
+A column for confidence B→A (pair orders / product B orders), rounded to 1 decimal place
+Filtering Rules:
+
+Only include pairs that appear together in at least 3 orders
+Each pair should appear only once (not both A-B and B-A)
+Ordering:
+
+By times bought together descending, then by support percentage descending
+High support indicates popular combinations. High confidence A→B means "customers who buy A usually also buy B" - ideal for "frequently bought together" recommendations.
+
+
+Solution:
+
+
+WITH TotalOrders AS (
+    SELECT COUNT(DISTINCT order_id) AS total_orders
+    FROM basket_order_items_265
+),
+ProductPairs AS (
+    SELECT 
+        a.product_id AS product_a,
+        b.product_id AS product_b,
+        COUNT(DISTINCT a.order_id) AS pair_count
+    FROM basket_order_items_265 AS a
+    JOIN basket_order_items_265 AS b 
+        ON a.order_id = b.order_id 
+        AND a.product_id < b.product_id
+    GROUP BY a.product_id, b.product_id
+),
+ProductCounts AS (
+    SELECT 
+        product_id,
+        COUNT(DISTINCT order_id) AS product_orders
+    FROM basket_order_items_265
+    GROUP BY product_id
+),
+AffinityMetrics AS (
+    SELECT 
+        pa.product_name AS product_a_name,
+        pb.product_name AS product_b_name,
+        pp.pair_count,
+        pca.product_orders AS product_a_orders,
+        pcb.product_orders AS product_b_orders,
+        t.total_orders,
+        ROUND(100.0 * pp.pair_count / t.total_orders, 1) AS support_pct,
+        ROUND(100.0 * pp.pair_count / pca.product_orders, 1) AS confidence_a_to_b,
+        ROUND(100.0 * pp.pair_count / pcb.product_orders, 1) AS confidence_b_to_a
+    FROM ProductPairs AS pp
+    JOIN basket_products_265 AS pa ON pp.product_a = pa.product_id
+    JOIN basket_products_265 AS pb ON pp.product_b = pb.product_id
+    JOIN ProductCounts AS pca ON pp.product_a = pca.product_id
+    JOIN ProductCounts AS pcb ON pp.product_b = pcb.product_id
+    CROSS JOIN TotalOrders AS t
+)
+SELECT 
+    product_a_name AS "ProductA",
+    product_b_name AS "ProductB",
+    pair_count AS "TimesBoughtTogether",
+    support_pct AS "SupportPct",
+    confidence_a_to_b AS "ConfidenceAtoB",
+    confidence_b_to_a AS "ConfidenceBtoA"
+FROM AffinityMetrics
+WHERE pair_count >= 3
+ORDER BY pair_count DESC, support_pct DESC
 
 
 
