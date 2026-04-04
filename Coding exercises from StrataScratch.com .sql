@@ -261,8 +261,35 @@ WHERE LP.Budget < AB.ActualBudget;
   
 ==================================================================================================================
 
-  
+Question: Finding Purchases
+
+Identify returning active users by finding users who made a repeat purchase within 7 days or less of their previous transaction, excluding same-day purchases. Output a list of these user_id.
+
+Table
+amazon_transactions
+created_at:date
+id:bigint
+item:varchar
+revenue:bigint
+user_id:bigint
+
+Solution:
+
+  WITH ordered_tx AS
+    (SELECT user_id,
+            CAST(created_at AS DATE) AS tx_date,
+            LAG(CAST(created_at AS DATE)) OVER (PARTITION BY user_id
+                                                ORDER BY created_at) AS prev_tx_date
+     FROM amazon_transactions)
+SELECT DISTINCT user_id
+FROM ordered_tx
+WHERE prev_tx_date IS NOT NULL
+    AND DATEDIFF(DAY, prev_tx_date, tx_date) > 0
+    AND DATEDIFF(DAY, prev_tx_date, tx_date) <= 7;
+
 ==================================================================================================================
+
+  
 ==================================================================================================================
 ==================================================================================================================
 ==================================================================================================================
